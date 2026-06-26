@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Reliable Clerk: SOP Simulator</title>
+    <style>
+        /* CSS Variables - Space Theme Gen Z Palette */
+        :root {
+            --bg-space: #0b0c10;
+            --glass-bg: rgba(25, 25, 35, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-blue: #00f0ff;
+            --neon-purple: #8a2be2;
+            --neon-green: #39ff14;
+            --neon-red: #ff003c;
+            --text-main: #e0e6ed;
+            --text-muted: #a0aab5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        /* Starry background effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px);
+            background-size: 550px 550px, 350px 350px, 250px 250px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            z-index: -1;
+            opacity: 0.5;
+            animation: drift 100s linear infinite;
+        }
+
+        @keyframes drift {
+            from { background-position: 0 0, 40px 60px, 130px 270px; }
+            to { background-position: -550px 0, -310px 60px, 130px -280px; }
+        }
+
+        /* Glassmorphism Container */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        /* Typography & Utilities */
+        h1, h2, h3 { color: #fff; margin-bottom: 15px; text-shadow: 0 0 10px rgba(0,240,255,0.5); }
+        h1 { font-size: 2.2rem; text-align: center; }
+        p { margin-bottom: 15px; line-height: 1.6; }
+        .highlight { color: var(--neon-blue); font-weight: bold; }
+        .text-center { text-align: center; }
+        .emoji-dec { font-size: 1.5rem; margin: 0 5px; }
+
+        /* Inputs & Buttons */
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--neon-blue);
+            color: #fff;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: box-shadow 0.3s;
+        }
+        input[type="text"]:focus { box-shadow: 0 0 15px rgba(0, 240, 255, 0.5); }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background: linear-gradient(45deg, var(--neon-purple), var(--neon-blue));
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 240, 255, 0.4); }
+        
+        .btn-choice {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--neon-blue);
+            color: #fff;
+            text-align: left;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+        }
+        .btn-choice:hover { background: rgba(0, 240, 255, 0.2); }
+
+        /* Top HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .hud-stats { display: flex; gap: 20px; font-weight: bold; }
+        .hud-stat span { color: var(--neon-blue); font-size: 1.2rem; }
+        
+        #btn-mute {
+            width: auto; padding: 10px 15px; margin:0;
+            background: rgba(255,255,255,0.1); border: 1px solid var(--text-muted);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            height: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        /* Badges */
+        .badges-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .badge {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid var(--text-muted);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem;
+            opacity: 0.3;
+            transition: all 0.5s;
+        }
+        .badge.active {
+            opacity: 1;
+            border-color: var(--neon-green);
+            box-shadow: 0 0 15px var(--neon-green);
+            transform: scale(1.1);
+        }
+
+        /* Dialogue Box */
+        .dialogue-box {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 4px solid var(--neon-purple);
+            padding: 20px;
+            border-radius: 0 10px 10px 0;
+            font-style: italic;
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        .dialogue-box::before {
+            content: '💬'; position: absolute; top: -15px; left: -10px; font-size: 1.5rem;
+        }
+
+        /* Screens */
+        .screen { display: none; width: 100%; }
+        .screen.active { display: block; animation: fadeIn 0.5s; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Feedback styling */
+        .feedback-correct { border-color: var(--neon-green); box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); }
+        .feedback-wrong { border-color: var(--neon-red); box-shadow: 0 0 20px rgba(255, 0, 60, 0.2); }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .hud { flex-direction: column; gap: 10px; align-items: flex-start; }
+            #btn-mute { position: absolute; top: 20px; right: 20px; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SCREEN 1: LOGIN & GATEWAY -->
+    <div id="screen-login" class="glass-panel screen active">
+        <h1>🚀 Galactic Helpdesk</h1>
+        <p class="text-center" style="color: var(--neon-blue);">SOP Simulator & Systemic Fix Training</p>
+        <br>
+        <p class="text-center">Selamat datang, Cadet! Masukkan identitas Anda untuk memulai shift.</p>
+        <input type="text" id="input-name" placeholder="Nama Lengkap" required>
+        <input type="text" id="input-nik" placeholder="NRP / NIK" required>
+        <button onclick="goToBriefing()">Log In ke Sistem</button>
+    </div>
+
+    <!-- SCREEN 2: MISSION BRIEFING (HOOK) -->
+    <div id="screen-briefing" class="glass-panel screen">
+        <h2>📡 Transmisi Masuk...</h2>
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <p><strong>Dari:</strong> Manager Operasional Stasiun</p>
+            <p><strong>Untuk:</strong> <span id="display-name" class="highlight"></span></p>
+            <p><em>"Kita semua lelah dengan komplain yang terus berulang. SOP sudah ada, tapi masalah tetap muncul."</em></p>
+            <p>Di stasiun ini, kita belajar bahwa pelayanan prima bukan diukur dari seberapa <span class="highlight">Cepat</span> kamu menjawab, melainkan seberapa <span class="highlight">Akurat dan Konsisten</span> sesuai standar (Reliability).</p>
+            <p>Jangan pernah gengsi menggunakan metode <strong>A-C-E (Acknowledge, Check SOP, Explain)</strong>.</p>
+            <p>Lebih dari itu, jika ada kesalahan berulang, jangan langsung salahkan rekan tim. Jadilah pemikir sistemik: <strong>Cari di mana pipa kerjanya yang bocor, bukan sekadar menambal cepat (Quick Fix)!</strong></p>
+        </div>
+        <h3>🎯 Mission Objective:</h3>
+        <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.6;">
+            <li>Selesaikan 15 skenario kasus lintas departemen dan pelanggan.</li>
+            <li>Pilih antara bereaksi impulsif (berisiko salah) atau merujuk SOP/Sistemik.</li>
+            <li>Kumpulkan lencana (Badges) dan pertahankan Skor Reliability di atas 70%.</li>
+        </ul>
+        <button onclick="startGame()">🚀 Siap Memulai Shift (Mulai Audio)</button>
+    </div>
+
+    <!-- SCREEN 3: GAMEPLAY CORE -->
+    <div id="screen-game" class="glass-panel screen">
+        <div class="hud">
+            <div class="hud-stats">
+                <div class="hud-stat">Level: <span id="level-display">1/15</span></div>
+                <div class="hud-stat">Score: <span id="score-display">0</span></div>
+            </div>
+            <button id="btn-mute" onclick="toggleMute()">🔊 Matikan BGM</button>
+        </div>
+
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <h3 id="question-title">Skenario Masuk...</h3>
+        <div class="dialogue-box" id="question-text">
+            Teks pertanyaan akan muncul di sini.
+        </div>
+
+        <div id="options-container">
+            <!-- Buttons injected here by JS -->
+        </div>
+
+        <div class="badges-container">
+            <div class="badge" id="badge-1" title="Rookie: Selesai 5 Level">🥉</div>
+            <div class="badge" id="badge-2" title="Pro: Selesai 10 Level">🥈</div>
+            <div class="badge" id="badge-3" title="Master: Selesai 15 Level">🥇</div>
+        </div>
+    </div>
+
+    <!-- SCREEN 4: FEEDBACK DEBRIEF -->
+    <div id="screen-feedback" class="glass-panel screen">
+        <h2 id="feedback-title" class="text-center">Hasil</h2>
+        <div class="text-center" style="font-size: 4rem; margin-bottom: 10px;" id="feedback-icon">✅</div>
+        <p id="feedback-text" style="font-size: 1.1rem; text-align: center; margin-bottom: 30px;">Penjelasan feedback</p>
+        <button onclick="nextLevel()">Lanjutkan ➡️</button>
+    </div>
+
+    <!-- SCREEN 5: FINAL RESULT -->
+    <div id="screen-result" class="glass-panel screen">
+        <h1 style="color: var(--neon-purple);">Shift Selesai!</h1>
+        <div class="text-center">
+            <div style="font-size: 5rem; margin: 20px 0; color: var(--neon-blue); text-shadow: 0 0 20px var(--neon-blue);" id="final-score">100</div>
+            <p style="font-size: 1.2rem; margin-bottom: 10px;">Total Poin Reliability</p>
+            <h3 id="final-status">Status</h3>
+            <p id="final-message" style="margin-bottom: 30px;">Pesan evaluasi.</p>
+        </div>
+        <button onclick="location.reload()">🔄 Mainkan Ulang</button>
+    </div>
+
+    <footer>Education & Training Dept. © 2026</footer>
+
+<script>
+/* ==========================================================================
+   WEB AUDIO API ENGINE (BGM & SFX)
+   ========================================================================== */
+let audioCtx;
+let masterGain;
+let bgmGain;
+let sfxGain;
+let isPlaying = false;
+let bgmInterval;
+
+// Space Synth Theme: Am - F - C - G (Looping)
+const chords = [
+    [220.00, 261.63, 329.63], // Am
+    [174.61, 220.00, 261.63], // F
+    [130.81, 164.81, 196.00], // C
+    [196.00, 246.94, 293.66]  // G
+];
+let chordStep = 0;
+let beatStep = 0;
+
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    bgmGain = audioCtx.createGain();
+    sfxGain = audioCtx.createGain();
+    
+    bgmGain.gain.value = 0.3; // BGM volume
+    sfxGain.gain.value = 0.8; // SFX volume
+    
+    bgmGain.connect(masterGain);
+    sfxGain.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+}
+
+function playBGM() {
+    if (!audioCtx || isPlaying) return;
+    isPlaying = true;
+    
+    // Simple Sequencer 120BPM (500ms per beat)
+    bgmInterval = setInterval(() => {
+        let time = audioCtx.currentTime;
+        
+        // 1. Kick (4-on-the-floor)
+        playKick(time);
+        
+        // 2. Hi-hat (every beat)
+        playHiHat(time + 0.25);
+
+        // 3. Snare (every 2nd and 4th beat)
+        if (beatStep % 2 !== 0) playSnare(time);
+
+        // 4. Bass (Root note of chord)
+        playBass(chords[chordStep][0] / 2, time);
+
+        // 5. Pad/Arp (Chord notes)
+        playPad(chords[chordStep], time);
+
+        beatStep++;
+        if (beatStep % 4 === 0) {
+            chordStep = (chordStep + 1) % chords.length;
+        }
+    }, 500);
+}
+
+// Instruments
+function playKick(time) {
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(bgmGain);
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+    gain.gain.setValueAtTime(1, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+    osc.start(time); osc.stop(time + 0.5);
+}
+
+function playSnare(time) {
+    // Synth snare using noise + osc
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.connect(gain); gain.connect(bgmGain);
+    osc.frequency.setValueAtTime(250, time);
+    gain.gain.setValueAtTime(0.5, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+    osc.start(time); osc.stop(time + 0.2);
+}
+
+function playHiHat(time) {
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.connect(gain); gain.connect(bgmGain);
+    osc.frequency.setValueAtTime(8000, time);
+    gain.gain.setValueAtTime(0.1, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+    osc.start(time); osc.stop(time + 0.1);
+}
+
+function playBass(freq, time) {
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.connect(gain); gain.connect(bgmGain);
+    osc.frequency.setValueAtTime(freq, time);
+    gain.gain.setValueAtTime(0.4, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4);
+    osc.start(time); osc.stop(time + 0.4);
+}
+
+function playPad(chord, time) {
+    chord.forEach(freq => {
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.connect(gain); gain.connect(bgmGain);
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(0.1, time + 0.2);
+        gain.gain.linearRampToValueAtTime(0, time + 0.5);
+        osc.start(time); osc.stop(time + 0.5);
+    });
+}
+
+// SFX
+function playSFX(isCorrect) {
+    if (!audioCtx) return;
+    let time = audioCtx.currentTime;
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.connect(gain); gain.connect(sfxGain);
+    
+    if (isCorrect) {
+        osc.frequency.setValueAtTime(400, time);
+        osc.frequency.setValueAtTime(600, time + 0.1);
+        osc.frequency.setValueAtTime(800, time + 0.2);
+        gain.gain.setValueAtTime(0.3, time);
+        gain.gain.linearRampToValueAtTime(0, time + 0.4);
+        osc.start(time); osc.stop(time + 0.4);
+    } else {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, time);
+        osc.frequency.setValueAtTime(250, time + 0.2);
+        gain.gain.setValueAtTime(0.3, time);
+        gain.gain.linearRampToValueAtTime(0, time + 0.5);
+        osc.start(time); osc.stop(time + 0.5);
+    }
+}
+
+function toggleMute() {
+    let btn = document.getElementById('btn-mute');
+    if (masterGain.gain.value > 0) {
+        masterGain.gain.value = 0;
+        btn.innerText = "🔇 Nyalakan BGM";
+    } else {
+        masterGain.gain.value = 1;
+        btn.innerText = "🔊 Matikan BGM";
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+    }
+}
+
+/* ==========================================================================
+   GAME LOGIC & DATA
+   ========================================================================== */
+const db = [
+    // Phase 1: Customer SOP (A-C-E)
+    { q: "Pelanggan VIP: 'Berapa hari klaim garansi untuk unit hyper-drive saya? Saya buru-buru!'", 
+      a1: { text: "'Seingat saya 3 hari kerja, Pak.' (Cepat, andalkan memori)", correct: false,
+            feed: "❌ Fatal! Aturan VIP baru saja diubah jadi 1 hari kerja. Mengandalkan memori berisiko komplain besar. Gunakan SOP." },
+      a2: { text: "Acknowledge-Check-Explain: 'Baik Pak, izin saya cek SOP klaim VIP di sistem sebentar agar akurat.'", correct: true,
+            feed: "✅ Tepat! Tidak perlu gengsi mengecek SOP. Pelanggan VIP lebih menghargai akurasi daripada kecepatan yang salah." } },
+            
+    { q: "Pelanggan marah: 'Bulan lalu saya dibilang bisa refund tiket luar angkasa 100%!'", 
+      a1: { text: "Gunakan A-C-E: 'Maaf atas kebingungannya Bu. Mari saya buka panduan refund terbaru agar kita lihat aturan pastinya.'", correct: true,
+            feed: "✅ Profesional! Menunjukkan SOP fisik meredam emosi karena argumen Anda berlandaskan standar perusahaan, bukan opini pribadi." },
+      a2: { text: "Debat langsung: 'Oh maaf Bu, teman saya salah ngasih info itu, aturannya gak gitu.'", correct: false,
+            feed: "❌ Buruk! Menyalahkan rekan kerja di depan pelanggan merusak citra (Reliability) perusahaan secara keseluruhan." } },
+            
+    { q: "Ditanya spesifikasi teknis firewall server yang sangat detail oleh IT Manager klien.", 
+      a1: { text: "Menjawab sekenanya atau menebak agar tidak terlihat bodoh.", correct: false,
+            feed: "❌ Salah! Klien teknis akan tahu Anda berbohong. Hilanglah kepercayaan mereka." },
+      a2: { text: "'Spesifikasinya detail Pak, mari kita lihat dokumen teknis (SOP) bersama.'", correct: true,
+            feed: "✅ Pintar! Mengecek dokumen bersama menunjukkan transparansi dan validitas tingkat tinggi." } },
+
+    { q: "Pelanggan bertanya batas waktu promo. Anda 80% yakin hari ini terakhir.", 
+      a1: { text: "'Hari ini terakhir Kak, ayo daftar sekarang!'", correct: false,
+            feed: "❌ Quick Fix impulsif! Ternyata promo diperpanjang minggu depan. Pelanggan merasa tertipu trik marketing murahan." },
+      a2: { text: "'Sebentar Kak, saya pastikan tanggal rilisnya di buletin sistem hari ini.'", correct: true,
+            feed: "✅ Aman dan Reliabel! Memastikan 100% adalah kunci dari pilar Reliability." } },
+
+    { q: "Pelanggan ngotot minta prosedur yang sebenarnya dilarang oleh SOP keamanan stasiun.", 
+      a1: { text: "Menjelaskan dengan SOP tertulis: 'Sesuai regulasi keamanan bab 4, hal ini berisiko untuk stasiun.'", correct: true,
+            feed: "✅ Tegas dan Terukur. SOP melindungi Anda dari perdebatan tak berujung." },
+      a2: { text: "Mengalah sedikit agar pelanggan cepat pergi dan antrean tidak panjang.", correct: false,
+            feed: "❌ Bahaya! Anda melanggar SOP keamanan demi kecepatan. Ini bom waktu operasional!" } },
+
+    // Phase 2: Systemic vs Quick Fix (Internal Dept)
+    { q: "Divisi Logistik marah karena laporan tim Anda selalu telat dan salah hitung tiap minggu.", 
+      a1: { text: "Panggil staf admin, tegur keras agar minggu depan lebih teliti (Quick Fix).", correct: false,
+            feed: "❌ Ini Quick Fix! Menegur orangnya tidak memperbaiki sistem. Minggu depan pasti salah lagi." },
+      a2: { text: "Ajak tim memetakan alur kerja (Systemic Fix) untuk cari penyebab keterlambatannya.", correct: true,
+            feed: "✅ Systemic Fix! Anda menemukan bahwa staf harus input manual dari 3 aplikasi berbeda. Sistemnya yang salah, bukan orangnya!" } },
+
+    { q: "Anda menemukan staf sering mengulangi kesalahan input data pelanggan yang sama.", 
+      a1: { text: "Tunda asumsi. Duduk bersama staf, lihat UI aplikasinya, mungkin desain formnya membingungkan.", correct: true,
+            feed: "✅ Empati Sistemik. Anda sadar 'pipa instalasi' nya yang mampet, bukan 'air' nya. Form diubah, error hilang." },
+      a2: { text: "Kirim Surat Peringatan (SP) agar staf merasa jera dan fokus.", correct: false,
+            feed: "❌ Pendekatan kuno. SP tidak menyederhanakan birokrasi aplikasi yang memang ruwet." } },
+
+    { q: "Sistem pengiriman error. Komplain antar departemen makin panas di grup chat.", 
+      a1: { text: "Bikin aturan ketat: 'Siapa yang telat lapor dipotong bonus!'", correct: false,
+            feed: "❌ Anda hanya menambal lubang dengan plester. Ini tidak mengatasi akar masalah." },
+      a2: { text: "Jadwalkan rapat, bawa papan tulis, petakan perjalanan data (Mapping Experiences) lintas divisi.", correct: true,
+            feed: "✅ Luar biasa! Dengan memvisualisasikan perjalanan (journey) data, semua divisi melihat di mana 'bottleneck' utamanya tanpa saling tuduh." } },
+
+    { q: "Analogi instalasi pipa: Tiap hari ada air merembes di kantor Anda.", 
+      a1: { text: "Siapkan tim lap (pembersih) yang standby 24 jam untuk mengepel airnya.", correct: false,
+            feed: "❌ Anda terjebak menjadi pemadam kebakaran operasional yang kelelahan. Energi habis!" },
+      a2: { text: "Bongkar temboknya, lihat sistem pipanya secara utuh, dan ganti pipa yang bengkok.", correct: true,
+            feed: "✅ Systemic Fix! Pemimpin hebat merancang instalasi kokoh, bukan rajin menambal bocor." } },
+
+    { q: "Rekan kerja sering komplain karena data dari tim Anda (SOP A) bentrok dengan SOP tim mereka.", 
+      a1: { text: "Berdebat bahwa SOP tim Anda yang paling benar.", correct: false,
+            feed: "❌ Ego sektoral merusak Reliability perusahaan di mata klien." },
+      a2: { text: "Duduk bersama merancang ulang SOP gabungan (Systemic Fix) agar selaras.", correct: true,
+            feed: "✅ Solusi permanen! Memperbaiki desain proses lintas departemen adalah kunci kolaborasi." } },
+
+    // Phase 3: Advanced Integration
+    { q: "Sistem sedang down. Antrean panjang. SOP mewajibkan verifikasi KTP 2 lapis.", 
+      a1: { text: "Bypass SOP jadi 1 lapis saja biar antrean cepat habis.", correct: false,
+            feed: "❌ Fatal! Jika ada fraud, Andalah yang disalahkan. Kecepatan tidak boleh mengorbankan keamanan." },
+      a2: { text: "Jelaskan situasinya (Explain), tetap jalankan SOP 2 lapis sambil menawarkan air minum.", correct: true,
+            feed: "✅ A-C-E dalam tekanan tinggi! Menjaga konsistensi adalah inti Reliability." } },
+
+    { q: "Seorang manajer memarahi staf admin Anda di depan Anda karena salah input data DC.", 
+      a1: { text: "Ikut memarahi staf agar manajer tersebut merasa dibela.", correct: false,
+            feed: "❌ Toxic Leadership. Anda gagal melihat masalah sistem (data lambat dari DC) dan malah menyerang individu." },
+      a2: { text: "Tengahi dengan tenang: 'Mari kita bedah alurnya di step mana proses ini macet.'", correct: true,
+            feed: "✅ Epic Leadership! Mengubah situasi saling serang menjadi kolaborasi pemecahan masalah sistem." } },
+
+    { q: "Anda menemukan SOP lama yang justru membuat pelayanan menjadi lambat dan berbelit.", 
+      a1: { text: "Tetap jalankan saja karena itu aturan. Jangan banyak protes.", correct: false,
+            feed: "❌ Pasif. SOP dibuat untuk membantu, jika menghambat, harus direvisi, bukan didiamkan." },
+      a2: { text: "Jalankan sambil mencatat kelemahannya, lalu usulkan perancangan ulang (Systemic Fix) ke pusat.", correct: true,
+            feed: "✅ Continuous Improvement! Ini mindset manajerial yang dicari perusahaan." } },
+
+    { q: "Staf baru bertanya: 'Kak, biar cepet jawab customer, saya hafalin aja ya jawaban-jawabannya?'", 
+      a1: { text: "'Boleh, asal ingatanmu kuat. Biar kelihatan pintar.'", correct: false,
+            feed: "❌ Anda mengajarkan budaya Quick Fix. Saat aturan berubah, staf ini akan jadi sumber komplain massal." },
+      a2: { text: "'Jangan dihafal. Banggalah buka SOP. Itu bukti pelayanan kita akurat, bukan asal nebak.'", correct: true,
+            feed: "✅ Mentoring yang tepat! Menanamkan nilai Reliability sejak hari pertama." } },
+
+    { q: "Akhir shift. Bos bertanya apa kesimpulan kerja hari ini.", 
+      a1: { text: "'Sistem yang baik menjaga performa tim tetap baik. Kita harus perbaiki sistemnya.'", correct: true,
+            feed: "✅ Sempurna. Anda menangkap pesan utama dari pelatihan: Kesalahan staf adalah sinyal bahwa sistem minta diperbaiki." },
+      a2: { text: "'Tim kita butuh lebih banyak motivasi dan hukuman biar nggak malas.'", correct: false,
+            feed: "❌ Masih terjebak di pola lama. Motivasi tidak bisa memperbaiki birokrasi aplikasi yang ruwet." } }
+];
+
+let currentLevel = 0;
+let score = 0;
+let maxScore = db.length * 10;
+let playerName = "";
+let playerNik = "";
+
+function goToBriefing() {
+    playerName = document.getElementById('input-name').value;
+    playerNik = document.getElementById('input-nik').value;
+    if(!playerName || !playerNik) { alert("Mohon isi identitas lengkap!"); return; }
+    
+    document.getElementById('display-name').innerText = `${playerName} (${playerNik})`;
+    switchScreen('screen-login', 'screen-briefing');
+}
+
+function startGame() {
+    initAudio();
+    playBGM();
+    switchScreen('screen-briefing', 'screen-game');
+    loadLevel();
+}
+
+function loadLevel() {
+    if(currentLevel >= db.length) { endGame(); return; }
+    
+    const qData = db[currentLevel];
+    document.getElementById('level-display').innerText = `${currentLevel + 1}/${db.length}`;
+    document.getElementById('score-display').innerText = score;
+    document.getElementById('question-title').innerText = `Kasus #${currentLevel + 1}`;
+    document.getElementById('question-text').innerText = qData.q;
+    
+    // Update Progress
+    const progress = ((currentLevel) / db.length) * 100;
+    document.getElementById('progress-bar').style.width = `${progress}%`;
+
+    const optContainer = document.getElementById('options-container');
+    optContainer.innerHTML = '';
+    
+    // Randomize options
+    let opts = [qData.a1, qData.a2];
+    opts.sort(() => Math.random() - 0.5);
+
+    opts.forEach(opt => {
+        let btn = document.createElement('button');
+        btn.className = 'btn-choice';
+        btn.innerHTML = `<span>👉</span> <span style="margin-left:10px;">${opt.text}</span>`;
+        btn.onclick = () => handleChoice(opt);
+        optContainer.appendChild(btn);
+    });
+}
+
+function handleChoice(opt) {
+    const feedbackBox = document.getElementById('screen-feedback');
+    feedbackBox.className = "glass-panel screen active " + (opt.correct ? "feedback-correct" : "feedback-wrong");
+    
+    if(opt.correct) {
+        score += 10;
+        playSFX(true);
+        document.getElementById('feedback-icon').innerText = '🌟';
+        document.getElementById('feedback-title').innerText = 'Keputusan Tepat!';
+        document.getElementById('feedback-title').style.color = 'var(--neon-green)';
+    } else {
+        playSFX(false);
+        document.getElementById('feedback-icon').innerText = '⚠️';
+        document.getElementById('feedback-title').innerText = 'Sistem Terganggu!';
+        document.getElementById('feedback-title').style.color = 'var(--neon-red)';
+    }
+    
+    document.getElementById('feedback-text').innerText = opt.feed;
+    switchScreen('screen-game', 'screen-feedback');
+    checkBadges();
+}
+
+function checkBadges() {
+    if(currentLevel === 4) document.getElementById('badge-1').classList.add('active'); // After Q5
+    if(currentLevel === 9) document.getElementById('badge-2').classList.add('active'); // After Q10
+    if(currentLevel === 14) document.getElementById('badge-3').classList.add('active'); // After Q15
+}
+
+function nextLevel() {
+    currentLevel++;
+    if(currentLevel >= db.length) {
+        endGame();
+    } else {
+        switchScreen('screen-feedback', 'screen-game');
+        loadLevel();
+    }
+}
+
+function endGame() {
+    switchScreen('screen-feedback', 'screen-result');
+    if(document.getElementById('screen-game').classList.contains('active')) {
+        switchScreen('screen-game', 'screen-result');
+    }
+
+    document.getElementById('final-score').innerText = score;
+    let percentage = Math.round((score / maxScore) * 100);
+    
+    const statusEl = document.getElementById('final-status');
+    const msgEl = document.getElementById('final-message');
+
+    if(percentage >= 80) {
+        statusEl.innerText = "🌟 SYSTEM MASTER 🌟";
+        statusEl.style.color = "var(--neon-green)";
+        msgEl.innerHTML = "Luar biasa! Anda memahami bahwa pelayanan prima bergantung pada SOP dan perbaikan sistem (Systemic Fix), bukan sekadar kecepatan sesaat.";
+    } else if (percentage >= 50) {
+        statusEl.innerText = "⚠️ PERLU KALIBRASI";
+        statusEl.style.color = "orange";
+        msgEl.innerHTML = "Cukup baik, namun Anda masih sering terjebak di pola 'Quick Fix'. Ingat, merujuk SOP dan memetakan alur kerja adalah langkah penting.";
+    } else {
+        statusEl.innerText = "❌ SISTEM OVERLOAD";
+        statusEl.style.color = "var(--neon-red)";
+        msgEl.innerHTML = "Operasional kacau. Anda terlalu sering mengabaikan SOP dan menyalahkan individu. Mari ubah mindset Anda dan coba lagi.";
+    }
+}
+
+function switchScreen(hideId, showId) {
+    document.getElementById(hideId).classList.remove('active');
+    document.getElementById(showId).classList.add('active');
+}
+</script>
+
+</body>
+</html>
